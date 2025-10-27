@@ -1,0 +1,15 @@
+{
+  "timestamp": 1747520787924,
+  "operation": {
+    "id": "db:postgres"
+  },
+  "projectId": "urgent-same-day-delivery",
+  "files": [
+    {
+      "path": "/mnt/data/urgent-same-day-delivery/backend/db.sql",
+      "type": "text",
+      "size": 60440,
+      "dependencies": false
+    }
+  ]
+}

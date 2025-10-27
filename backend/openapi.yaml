@@ -1,0 +1,3913 @@
+openapi: 3.0.0
+info:
+  title: FlashDrop API
+  description: API for FlashDrop same-day, intra-city delivery service
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+    description: Development server
+paths:
+  /api/auth/register:
+    post:
+      operationId: register_user
+      summary: Register a new user (sender or courier)
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User successfully registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email or phone number already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/auth/courier/complete-profile:
+    post:
+      operationId: complete_courier_profile
+      summary: Complete the courier profile with vehicle and service details
+      tags:
+        - Authentication
+        - Courier Management
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CourierProfileRequest"
+      responses:
+        "200":
+          description: Profile completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourierProfileResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: User is not a courier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/auth/login:
+    post:
+      operationId: login_user
+      summary: Authenticate a user and get a token
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/auth/password/reset-request:
+    post:
+      operationId: request_password_reset
+      summary: Request a password reset link
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+              required:
+                - email
+      responses:
+        "200":
+          description: Reset email sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          description: Email not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/auth/password/reset:
+    post:
+      operationId: reset_password
+      summary: Reset password using token
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                new_password:
+                  type: string
+                  format: password
+              required:
+                - token
+                - new_password
+      responses:
+        "200":
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Invalid input or token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/auth/verify-email/{token}:
+    get:
+      operationId: verify_email
+      summary: Verify user's email address
+      tags:
+        - Authentication
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Email verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/auth/verify-phone:
+    post:
+      operationId: verify_phone
+      summary: Verify user's phone number with SMS code
+      tags:
+        - Authentication
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+              required:
+                - code
+      responses:
+        "200":
+          description: Phone verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Invalid code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/users/profile:
+    get:
+      operationId: get_user_profile
+      summary: Get current user's profile
+      tags:
+        - User Management
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User profile retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfileResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: update_user_profile
+      summary: Update current user's profile
+      tags:
+        - User Management
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+      responses:
+        "200":
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateProfileResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/users/courier-profile:
+    put:
+      operationId: update_courier_profile
+      summary: Update courier-specific profile information
+      tags:
+        - User Management
+        - Courier Management
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCourierProfileRequest"
+      responses:
+        "200":
+          description: Courier profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateCourierProfileResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: User is not a courier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/users/preferences:
+    put:
+      operationId: update_user_preferences
+      summary: Update user's notification and app preferences
+      tags:
+        - User Management
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserPreferencesRequest"
+      responses:
+        "200":
+          description: Preferences updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPreferencesResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/users/payment-methods:
+    get:
+      operationId: get_payment_methods
+      summary: Get user's saved payment methods
+      tags:
+        - Payments
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Payment methods retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  payment_methods:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PaymentMethod"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: add_payment_method
+      summary: Add a new payment method
+      tags:
+        - Payments
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddPaymentMethodRequest"
+      responses:
+        "201":
+          description: Payment method added successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AddPaymentMethodResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/users/payment-methods/{id}:
+    delete:
+      operationId: delete_payment_method
+      summary: Delete a payment method
+      tags:
+        - Payments
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Payment method deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Payment method not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/users/payment-methods/{id}/default:
+    put:
+      operationId: set_default_payment_method
+      summary: Set a payment method as default
+      tags:
+        - Payments
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Default payment method set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Payment method not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/courier/earnings:
+    get:
+      operationId: get_courier_earnings
+      summary: Get courier's earnings information
+      tags:
+        - Courier Management
+        - Payments
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - day
+              - week
+              - month
+              - all
+            default: week
+        - name: start_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Earnings retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourierEarningsResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: User is not a courier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/courier/bank-accounts:
+    get:
+      operationId: get_bank_accounts
+      summary: Get courier's bank accounts for payouts
+      tags:
+        - Courier Management
+        - Payments
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Bank accounts retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bank_accounts:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/BankAccount"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: User is not a courier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: add_bank_account
+      summary: Add a new bank account for payouts
+      tags:
+        - Courier Management
+        - Payments
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddBankAccountRequest"
+      responses:
+        "201":
+          description: Bank account added successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AddBankAccountResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: User is not a courier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/addresses:
+    get:
+      operationId: get_addresses
+      summary: Get user's saved addresses
+      tags:
+        - Addresses
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Addresses retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  addresses:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Address"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: add_address
+      summary: Add a new saved address
+      tags:
+        - Addresses
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddAddressRequest"
+      responses:
+        "201":
+          description: Address added successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AddAddressResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/addresses/{id}:
+    put:
+      operationId: update_address
+      summary: Update a saved address
+      tags:
+        - Addresses
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAddressRequest"
+      responses:
+        "200":
+          description: Address updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateAddressResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Address not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: delete_address
+      summary: Delete a saved address
+      tags:
+        - Addresses
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Address deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Address not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/addresses/validate:
+    post:
+      operationId: validate_address
+      summary: Validate an address and get geocoded information
+      tags:
+        - Addresses
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidateAddressRequest"
+      responses:
+        "200":
+          description: Address validated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidateAddressResponse"
+        "400":
+          description: Invalid input or address
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/package-types:
+    get:
+      operationId: get_package_types
+      summary: Get available package types for delivery
+      tags:
+        - Delivery Management
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Package types retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  package_types:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PackageType"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/deliveries/estimate:
+    post:
+      operationId: estimate_delivery
+      summary: Estimate cost and time for a potential delivery
+      tags:
+        - Delivery Management
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeliveryEstimateRequest"
+      responses:
+        "200":
+          description: Delivery estimated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryEstimateResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/deliveries:
+    post:
+      operationId: create_delivery
+      summary: Create a new delivery request
+      tags:
+        - Delivery Management
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDeliveryRequest"
+      responses:
+        "201":
+          description: Delivery created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateDeliveryResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      operationId: list_deliveries
+      summary: Get user's delivery history with filtering
+      tags:
+        - Delivery Management
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated statuses to filter by
+        - name: start_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Deliveries retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryListResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/deliveries/{id}:
+    get:
+      operationId: get_delivery
+      summary: Get detailed information about a specific delivery
+      tags:
+        - Delivery Management
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: tracking_token
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Delivery details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryDetailsResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Delivery not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/deliveries/{id}/cancel:
+    put:
+      operationId: cancel_delivery
+      summary: Cancel a pending delivery
+      tags:
+        - Delivery Management
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Delivery cancelled successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CancelDeliveryResponse"
+        "400":
+          description: Delivery cannot be cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Delivery not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/deliveries/{id}/tip:
+    post:
+      operationId: add_tip
+      summary: Add or update tip amount for a delivery
+      tags:
+        - Delivery Management
+        - Payments
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tip_amount:
+                  type: number
+                  format: float
+                  minimum: 0
+              required:
+                - tip_amount
+      responses:
+        "200":
+          description: Tip added successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryTipResponse"
+        "400":
+          description: Invalid tip amount
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Delivery not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/deliveries/{id}/rate:
+    post:
+      operationId: rate_delivery
+      summary: Submit rating for a completed delivery
+      tags:
+        - Delivery Management
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeliveryRatingRequest"
+      responses:
+        "201":
+          description: Rating submitted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryRatingResponse"
+        "400":
+          description: Invalid input or delivery not eligible for rating
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Delivery not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/deliveries/{id}/report-issue:
+    post:
+      operationId: report_delivery_issue
+      summary: Report an issue with a delivery
+      tags:
+        - Delivery Management
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeliveryIssueRequest"
+      responses:
+        "201":
+          description: Issue reported successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryIssueResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Delivery not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/deliveries/{id}/receipt:
+    get:
+      operationId: get_delivery_receipt
+      summary: Get receipt for a completed delivery
+      tags:
+        - Delivery Management
+        - Payments
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - json
+              - pdf
+            default: json
+      responses:
+        "200":
+          description: Receipt generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryReceiptResponse"
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Delivery not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/courier/availability:
+    put:
+      operationId: update_courier_availability
+      summary: Update courier's availability status and location
+      tags:
+        - Courier Management
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CourierAvailabilityRequest"
+      responses:
+        "200":
+          description: Availability updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourierAvailabilityResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: User is not a courier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/courier/location:
+    post:
+      operationId: update_courier_location
+      summary: Update courier's location during delivery
+      tags:
+        - Courier Management
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CourierLocationUpdateRequest"
+      responses:
+        "200":
+          description: Location updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourierLocationUpdateResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: User is not a courier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/courier/active-delivery:
+    get:
+      operationId: get_active_delivery
+      summary: Get courier's currently active delivery
+      tags:
+        - Courier Management
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Active delivery retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryDetailsResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: User is not a courier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: No active delivery found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/courier/delivery-requests:
+    get:
+      operationId: get_delivery_requests
+      summary: Get nearby delivery requests available for courier
+      tags:
+        - Courier Management
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: lat
+          in: query
+          required: false
+          schema:
+            type: number
+            format: float
+        - name: lng
+          in: query
+          required: false
+          schema:
+            type: number
+            format: float
+        - name: max_distance
+          in: query
+          required: false
+          schema:
+            type: number
+            format: float
+      responses:
+        "200":
+          description: Delivery requests retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryRequestsResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: User is not a courier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/courier/accept-delivery/{id}:
+    post:
+      operationId: accept_delivery
+      summary: Accept a delivery request
+      tags:
+        - Courier Management
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcceptDeliveryRequest"
+      responses:
+        "200":
+          description: Delivery accepted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcceptDeliveryResponse"
+        "400":
+          description: Delivery cannot be accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: User is not a courier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Delivery not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Delivery already assigned to another courier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/courier/delivery-status/{id}:
+    put:
+      operationId: update_delivery_status
+      summary: Update the status of a delivery
+      tags:
+        - Courier Management
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDeliveryStatusRequest"
+      responses:
+        "200":
+          description: Delivery status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateDeliveryStatusResponse"
+        "400":
+          description: Invalid status transition or input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not the assigned courier for this delivery
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Delivery not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/messages/{delivery_id}:
+    get:
+      operationId: get_delivery_messages
+      summary: Get messages for a specific delivery
+      tags:
+        - Messaging
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: delivery_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+        - name: before
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: tracking_token
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Messages retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryMessagesResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Delivery not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: send_message
+      summary: Send a message related to a delivery
+      tags:
+        - Messaging
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: delivery_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageRequest"
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                attachment:
+                  type: string
+                  format: binary
+                attachment_type:
+                  type: string
+                tracking_token:
+                  type: string
+              required:
+                - content
+      responses:
+        "201":
+          description: Message sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SendMessageResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Delivery not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/messages/{id}/read:
+    put:
+      operationId: mark_message_read
+      summary: Mark a message as read
+      tags:
+        - Messaging
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Message marked as read
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    $ref: "#/components/schemas/MessageReadStatus"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Message not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/notifications:
+    get:
+      operationId: get_notifications
+      summary: Get user's notifications
+      tags:
+        - Notifications
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: is_read
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Notifications retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationsResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/notifications/{id}/read:
+    put:
+      operationId: mark_notification_read
+      summary: Mark a notification as read
+      tags:
+        - Notifications
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Notification marked as read
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  notification:
+                    $ref: "#/components/schemas/NotificationReadStatus"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Notification not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/notifications/read-all:
+    put:
+      operationId: mark_all_notifications_read
+      summary: Mark all notifications as read
+      tags:
+        - Notifications
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: All notifications marked as read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarkAllReadResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/promo-codes/validate:
+    post:
+      operationId: validate_promo_code
+      summary: Validate a promo code
+      tags:
+        - Payments
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidatePromoCodeRequest"
+      responses:
+        "200":
+          description: Promo code validated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidatePromoCodeResponse"
+        "400":
+          description: Invalid promo code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    RegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        phone_number:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        user_type:
+          type: string
+          enum:
+            - sender
+            - courier
+        profile_picture_url:
+          type: string
+      required:
+        - email
+        - password
+        - phone_number
+        - first_name
+        - last_name
+        - user_type
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        user:
+          type: object
+          properties:
+            uid:
+              type: string
+            email:
+              type: string
+            first_name:
+              type: string
+            last_name:
+              type: string
+            user_type:
+              type: string
+            status:
+              type: string
+            phone_number:
+              type: string
+            profile_picture_url:
+              type: string
+            created_at:
+              type: string
+              format: date-time
+        token:
+          type: string
+        message:
+          type: string
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+      required:
+        - email
+        - password
+    CourierProfileRequest:
+      type: object
+      properties:
+        max_weight_capacity:
+          type: number
+          format: float
+        service_area_radius:
+          type: number
+          format: float
+        service_area_center_lat:
+          type: number
+          format: float
+        service_area_center_lng:
+          type: number
+          format: float
+        vehicle:
+          type: object
+          properties:
+            type:
+              type: string
+              enum:
+                - bicycle
+                - motorcycle
+                - car
+                - van
+                - truck
+            make:
+              type: string
+            model:
+              type: string
+            year:
+              type: integer
+            color:
+              type: string
+            license_plate:
+              type: string
+            max_capacity_volume:
+              type: number
+              format: float
+            photo_url:
+              type: string
+          required:
+            - type
+      required:
+        - max_weight_capacity
+        - service_area_radius
+        - vehicle
+    CourierProfileResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        courier_profile:
+          type: object
+          properties:
+            uid:
+              type: string
+            max_weight_capacity:
+              type: number
+            service_area_radius:
+              type: number
+            service_area_center_lat:
+              type: number
+            service_area_center_lng:
+              type: number
+            id_verification_status:
+              type: string
+            background_check_status:
+              type: string
+        vehicle:
+          type: object
+          properties:
+            uid:
+              type: string
+            type:
+              type: string
+            make:
+              type: string
+            model:
+              type: string
+            year:
+              type: integer
+            color:
+              type: string
+            license_plate:
+              type: string
+            max_capacity_volume:
+              type: number
+            photo_url:
+              type: string
+            insurance_verified:
+              type: boolean
+        message:
+          type: string
+    UserProfileResponse:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            uid:
+              type: string
+            email:
+              type: string
+            first_name:
+              type: string
+            last_name:
+              type: string
+            phone_number:
+              type: string
+            profile_picture_url:
+              type: string
+            user_type:
+              type: string
+            status:
+              type: string
+            average_rating:
+              type: number
+              format: float
+            total_ratings:
+              type: integer
+            account_balance:
+              type: number
+              format: float
+            email_verified:
+              type: boolean
+            phone_verified:
+              type: boolean
+            created_at:
+              type: string
+              format: date-time
+        preferences:
+          $ref: "#/components/schemas/UserPreferences"
+        courier_profile:
+          type: object
+          properties:
+            is_available:
+              type: boolean
+            max_weight_capacity:
+              type: number
+            background_check_status:
+              type: string
+            id_verification_status:
+              type: string
+            service_area_radius:
+              type: number
+            service_area_center_lat:
+              type: number
+            service_area_center_lng:
+              type: number
+            total_deliveries:
+              type: integer
+            completed_deliveries:
+              type: integer
+            cancelled_deliveries:
+              type: integer
+        vehicle:
+          type: object
+          properties:
+            uid:
+              type: string
+            type:
+              type: string
+            make:
+              type: string
+            model:
+              type: string
+            year:
+              type: integer
+            color:
+              type: string
+            license_plate:
+              type: string
+            insurance_verified:
+              type: boolean
+            max_capacity_volume:
+              type: number
+            photo_url:
+              type: string
+    UpdateProfileRequest:
+      type: object
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        profile_picture_url:
+          type: string
+    UpdateProfileResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        user:
+          type: object
+          properties:
+            uid:
+              type: string
+            first_name:
+              type: string
+            last_name:
+              type: string
+            profile_picture_url:
+              type: string
+            updated_at:
+              type: string
+              format: date-time
+        message:
+          type: string
+    UpdateCourierProfileRequest:
+      type: object
+      properties:
+        courier_profile:
+          type: object
+          properties:
+            max_weight_capacity:
+              type: number
+              format: float
+            service_area_radius:
+              type: number
+              format: float
+            service_area_center_lat:
+              type: number
+              format: float
+            service_area_center_lng:
+              type: number
+              format: float
+        vehicle:
+          type: object
+          properties:
+            type:
+              type: string
+              enum:
+                - bicycle
+                - motorcycle
+                - car
+                - van
+                - truck
+            make:
+              type: string
+            model:
+              type: string
+            year:
+              type: integer
+            color:
+              type: string
+            license_plate:
+              type: string
+            max_capacity_volume:
+              type: number
+              format: float
+            photo_url:
+              type: string
+    UpdateCourierProfileResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        courier_profile:
+          type: object
+          properties:
+            uid:
+              type: string
+            max_weight_capacity:
+              type: number
+            service_area_radius:
+              type: number
+            service_area_center_lat:
+              type: number
+            service_area_center_lng:
+              type: number
+            updated_at:
+              type: string
+              format: date-time
+        vehicle:
+          type: object
+          properties:
+            uid:
+              type: string
+            type:
+              type: string
+            make:
+              type: string
+            model:
+              type: string
+            year:
+              type: integer
+            color:
+              type: string
+            license_plate:
+              type: string
+            max_capacity_volume:
+              type: number
+            photo_url:
+              type: string
+            updated_at:
+              type: string
+              format: date-time
+        message:
+          type: string
+    UserPreferences:
+      type: object
+      properties:
+        push_new_message:
+          type: boolean
+        push_status_updates:
+          type: boolean
+        push_delivery_request:
+          type: boolean
+        email_delivery_completion:
+          type: boolean
+        email_receipts:
+          type: boolean
+        email_promotions:
+          type: boolean
+        sms_critical_updates:
+          type: boolean
+        language:
+          type: string
+        timezone:
+          type: string
+        distance_unit:
+          type: string
+          enum:
+            - miles
+            - kilometers
+    UserPreferencesRequest:
+      type: object
+      properties:
+        push_new_message:
+          type: boolean
+        push_status_updates:
+          type: boolean
+        push_delivery_request:
+          type: boolean
+        email_delivery_completion:
+          type: boolean
+        email_receipts:
+          type: boolean
+        email_promotions:
+          type: boolean
+        sms_critical_updates:
+          type: boolean
+        language:
+          type: string
+        timezone:
+          type: string
+        distance_unit:
+          type: string
+          enum:
+            - miles
+            - kilometers
+    UserPreferencesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        preferences:
+          allOf:
+            - $ref: "#/components/schemas/UserPreferences"
+            - type: object
+              properties:
+                updated_at:
+                  type: string
+                  format: date-time
+        message:
+          type: string
+    PaymentMethod:
+      type: object
+      properties:
+        uid:
+          type: string
+        payment_type:
+          type: string
+          enum:
+            - credit_card
+            - debit_card
+            - apple_pay
+            - google_pay
+        provider:
+          type: string
+        last_four:
+          type: string
+        expiry_month:
+          type: integer
+        expiry_year:
+          type: integer
+        is_default:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        billing_address:
+          $ref: "#/components/schemas/AddressShort"
+    AddPaymentMethodRequest:
+      type: object
+      properties:
+        payment_type:
+          type: string
+          enum:
+            - credit_card
+            - debit_card
+            - apple_pay
+            - google_pay
+        token:
+          type: string
+        provider:
+          type: string
+        last_four:
+          type: string
+        expiry_month:
+          type: integer
+        expiry_year:
+          type: integer
+        is_default:
+          type: boolean
+        billing_address:
+          $ref: "#/components/schemas/AddressShort"
+      required:
+        - payment_type
+        - token
+    AddPaymentMethodResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        payment_method:
+          allOf:
+            - $ref: "#/components/schemas/PaymentMethod"
+            - type: object
+              properties:
+                billing_address:
+                  allOf:
+                    - $ref: "#/components/schemas/AddressShort"
+                    - type: object
+                      properties:
+                        uid:
+                          type: string
+        message:
+          type: string
+    BankAccount:
+      type: object
+      properties:
+        uid:
+          type: string
+        account_holder_name:
+          type: string
+        account_type:
+          type: string
+          enum:
+            - checking
+            - savings
+        bank_name:
+          type: string
+        masked_account_number:
+          type: string
+        is_verified:
+          type: boolean
+        is_default:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+    AddBankAccountRequest:
+      type: object
+      properties:
+        account_holder_name:
+          type: string
+        account_type:
+          type: string
+          enum:
+            - checking
+            - savings
+        bank_name:
+          type: string
+        account_number:
+          type: string
+        routing_number:
+          type: string
+        is_default:
+          type: boolean
+      required:
+        - account_holder_name
+        - account_type
+        - bank_name
+        - account_number
+        - routing_number
+    AddBankAccountResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        bank_account:
+          $ref: "#/components/schemas/BankAccount"
+        message:
+          type: string
+    CourierEarningsResponse:
+      type: object
+      properties:
+        current_balance:
+          type: number
+          format: float
+        earnings_summary:
+          type: object
+          properties:
+            total_earnings:
+              type: number
+              format: float
+            completed_deliveries:
+              type: integer
+            total_tips:
+              type: number
+              format: float
+            period:
+              type: string
+        earnings_by_day:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              amount:
+                type: number
+                format: float
+              tips:
+                type: number
+                format: float
+              deliveries:
+                type: integer
+        recent_payouts:
+          type: array
+          items:
+            type: object
+            properties:
+              uid:
+                type: string
+              amount:
+                type: number
+                format: float
+              status:
+                type: string
+                enum:
+                  - pending
+                  - processing
+                  - completed
+                  - failed
+              period_start:
+                type: string
+                format: date-time
+              period_end:
+                type: string
+                format: date-time
+              delivery_count:
+                type: integer
+              created_at:
+                type: string
+                format: date-time
+    Location:
+      type: object
+      properties:
+        lat:
+          type: number
+          format: float
+        lng:
+          type: number
+          format: float
+    AddressShort:
+      type: object
+      properties:
+        street_address:
+          type: string
+        unit_number:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        postal_code:
+          type: string
+        country:
+          type: string
+      required:
+        - street_address
+        - city
+        - state
+        - postal_code
+    Address:
+      allOf:
+        - $ref: "#/components/schemas/AddressShort"
+        - type: object
+          properties:
+            uid:
+              type: string
+            label:
+              type: string
+            lat:
+              type: number
+              format: float
+            lng:
+              type: number
+              format: float
+            is_default:
+              type: boolean
+            delivery_instructions:
+              type: string
+            access_code:
+              type: string
+            landmark:
+              type: string
+            created_at:
+              type: string
+              format: date-time
+    AddAddressRequest:
+      allOf:
+        - $ref: "#/components/schemas/AddressShort"
+        - type: object
+          properties:
+            label:
+              type: string
+            lat:
+              type: number
+              format: float
+            lng:
+              type: number
+              format: float
+            is_default:
+              type: boolean
+            delivery_instructions:
+              type: string
+            access_code:
+              type: string
+            landmark:
+              type: string
+          required:
+            - street_address
+            - city
+            - state
+            - postal_code
+    AddAddressResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        address:
+          $ref: "#/components/schemas/Address"
+        message:
+          type: string
+    UpdateAddressRequest:
+      type: object
+      properties:
+        label:
+          type: string
+        street_address:
+          type: string
+        unit_number:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        postal_code:
+          type: string
+        country:
+          type: string
+        lat:
+          type: number
+          format: float
+        lng:
+          type: number
+          format: float
+        is_default:
+          type: boolean
+        delivery_instructions:
+          type: string
+        access_code:
+          type: string
+        landmark:
+          type: string
+    UpdateAddressResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        address:
+          allOf:
+            - $ref: "#/components/schemas/Address"
+            - type: object
+              properties:
+                updated_at:
+                  type: string
+                  format: date-time
+        message:
+          type: string
+    ValidateAddressRequest:
+      $ref: "#/components/schemas/AddressShort"
+    ValidateAddressResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        formatted_address:
+          type: string
+        components:
+          $ref: "#/components/schemas/AddressShort"
+        coordinates:
+          $ref: "#/components/schemas/Location"
+        message:
+          type: string
+    PackageType:
+      type: object
+      properties:
+        uid:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        max_weight:
+          type: number
+          format: float
+        dimensions:
+          type: object
+          properties:
+            length:
+              type: number
+              format: float
+            width:
+              type: number
+              format: float
+            height:
+              type: number
+              format: float
+        base_price:
+          type: number
+          format: float
+        icon_url:
+          type: string
+    DeliveryEstimateRequest:
+      type: object
+      properties:
+        pickup_address:
+          $ref: "#/components/schemas/AddressShort"
+        delivery_address:
+          $ref: "#/components/schemas/AddressShort"
+        package_type_id:
+          type: string
+        package_weight:
+          type: number
+          format: float
+        priority_level:
+          type: string
+          enum:
+            - standard
+            - express
+            - urgent
+        promo_code:
+          type: string
+      required:
+        - pickup_address
+        - delivery_address
+        - package_type_id
+    DeliveryEstimateResponse:
+      type: object
+      properties:
+        estimate:
+          type: object
+          properties:
+            distance:
+              type: number
+              format: float
+            estimated_duration:
+              type: number
+              format: float
+            estimated_delivery_time:
+              type: string
+              format: date-time
+            pricing:
+              type: object
+              properties:
+                base_fee:
+                  type: number
+                  format: float
+                distance_fee:
+                  type: number
+                  format: float
+                weight_fee:
+                  type: number
+                  format: float
+                priority_fee:
+                  type: number
+                  format: float
+                tax:
+                  type: number
+                  format: float
+                discount:
+                  type: number
+                  format: float
+                total:
+                  type: number
+                  format: float
+            is_service_available:
+              type: boolean
+            available_couriers_nearby:
+              type: integer
+        promo_applied:
+          type: object
+          properties:
+            code:
+              type: string
+            discount_type:
+              type: string
+              enum:
+                - percentage
+                - fixed_amount
+            discount_value:
+              type: number
+              format: float
+            discount_amount:
+              type: number
+              format: float
+    CreateDeliveryRequest:
+      type: object
+      properties:
+        pickup_address:
+          type: object
+          properties:
+            use_saved_address_id:
+              type: string
+            street_address:
+              type: string
+            unit_number:
+              type: string
+            city:
+              type: string
+            state:
+              type: string
+            postal_code:
+              type: string
+            country:
+              type: string
+            lat:
+              type: number
+              format: float
+            lng:
+              type: number
+              format: float
+            delivery_instructions:
+              type: string
+            access_code:
+              type: string
+            save_address:
+              type: boolean
+        delivery_address:
+          type: object
+          properties:
+            use_saved_address_id:
+              type: string
+            street_address:
+              type: string
+            unit_number:
+              type: string
+            city:
+              type: string
+            state:
+              type: string
+            postal_code:
+              type: string
+            country:
+              type: string
+            lat:
+              type: number
+              format: float
+            lng:
+              type: number
+              format: float
+            delivery_instructions:
+              type: string
+            access_code:
+              type: string
+            save_address:
+              type: boolean
+        package:
+          type: object
+          properties:
+            package_type_id:
+              type: string
+            description:
+              type: string
+            weight:
+              type: number
+              format: float
+            is_fragile:
+              type: boolean
+            photo_url:
+              type: string
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  quantity:
+                    type: integer
+                  description:
+                    type: string
+                  declared_value:
+                    type: number
+                    format: float
+                  photo_url:
+                    type: string
+                required:
+                  - name
+          required:
+            - package_type_id
+            - description
+        recipient:
+          type: object
+          properties:
+            name:
+              type: string
+            phone:
+              type: string
+            email:
+              type: string
+              format: email
+          required:
+            - name
+        delivery_options:
+          type: object
+          properties:
+            scheduled_pickup_time:
+              type: string
+              format: date-time
+            priority_level:
+              type: string
+              enum:
+                - standard
+                - express
+                - urgent
+            requires_signature:
+              type: boolean
+            requires_id_verification:
+              type: boolean
+            requires_photo_proof:
+              type: boolean
+            special_instructions:
+              type: string
+            verification_code:
+              type: string
+        payment:
+          type: object
+          properties:
+            payment_method_id:
+              type: string
+            promo_code:
+              type: string
+          required:
+            - payment_method_id
+      required:
+        - pickup_address
+        - delivery_address
+        - package
+        - recipient
+        - payment
+    CreateDeliveryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        delivery:
+          type: object
+          properties:
+            uid:
+              type: string
+            status:
+              type: string
+            created_at:
+              type: string
+              format: date-time
+            scheduled_pickup_time:
+              type: string
+              format: date-time
+            estimated_delivery_time:
+              type: string
+              format: date-time
+            tracking_code:
+              type: string
+            recipient_tracking_link:
+              type: string
+        payment:
+          type: object
+          properties:
+            uid:
+              type: string
+            status:
+              type: string
+            amount:
+              type: number
+              format: float
+            breakdown:
+              type: object
+              properties:
+                base_fee:
+                  type: number
+                  format: float
+                distance_fee:
+                  type: number
+                  format: float
+                weight_fee:
+                  type: number
+                  format: float
+                priority_fee:
+                  type: number
+                  format: float
+                tax:
+                  type: number
+                  format: float
+                discount:
+                  type: number
+                  format: float
+                total:
+                  type: number
+                  format: float
+        message:
+          type: string
+    DeliveryListResponse:
+      type: object
+      properties:
+        deliveries:
+          type: array
+          items:
+            type: object
+            properties:
+              uid:
+                type: string
+              status:
+                type: string
+              created_at:
+                type: string
+                format: date-time
+              scheduled_pickup_time:
+                type: string
+                format: date-time
+              actual_pickup_time:
+                type: string
+                format: date-time
+              estimated_delivery_time:
+                type: string
+                format: date-time
+              actual_delivery_time:
+                type: string
+                format: date-time
+              package_type:
+                type: object
+                properties:
+                  uid:
+                    type: string
+                  name:
+                    type: string
+                  icon_url:
+                    type: string
+              pickup_address:
+                $ref: "#/components/schemas/AddressShort"
+              delivery_address:
+                $ref: "#/components/schemas/AddressShort"
+              recipient_name:
+                type: string
+              distance:
+                type: number
+                format: float
+              priority_level:
+                type: string
+              payment:
+                type: object
+                properties:
+                  uid:
+                    type: string
+                  status:
+                    type: string
+                  amount:
+                    type: number
+                    format: float
+              courier:
+                type: object
+                properties:
+                  uid:
+                    type: string
+                  first_name:
+                    type: string
+                  last_name:
+                    type: string
+                  profile_picture_url:
+                    type: string
+                  average_rating:
+                    type: number
+                    format: float
+        pagination:
+          type: object
+          properties:
+            total_items:
+              type: integer
+            total_pages:
+              type: integer
+            current_page:
+              type: integer
+            has_next_page:
+              type: boolean
+            has_prev_page:
+              type: boolean
+    DeliveryDetailsResponse:
+      type: object
+      properties:
+        delivery:
+          type: object
+          properties:
+            uid:
+              type: string
+            status:
+              type: string
+            created_at:
+              type: string
+              format: date-time
+            scheduled_pickup_time:
+              type: string
+              format: date-time
+            actual_pickup_time:
+              type: string
+              format: date-time
+            estimated_delivery_time:
+              type: string
+              format: date-time
+            actual_delivery_time:
+              type: string
+              format: date-time
+            package_description:
+              type: string
+            package_weight:
+              type: number
+              format: float
+            is_fragile:
+              type: boolean
+            package_photo_url:
+              type: string
+            delivery_proof_url:
+              type: string
+            requires_signature:
+              type: boolean
+            requires_id_verification:
+              type: boolean
+            requires_photo_proof:
+              type: boolean
+            special_instructions:
+              type: string
+            distance:
+              type: number
+              format: float
+            estimated_duration:
+              type: number
+              format: float
+            priority_level:
+              type: string
+            verification_code:
+              type: string
+            package_type:
+              type: object
+              properties:
+                uid:
+                  type: string
+                name:
+                  type: string
+                description:
+                  type: string
+                icon_url:
+                  type: string
+            pickup_address:
+              allOf:
+                - $ref: "#/components/schemas/AddressShort"
+                - type: object
+                  properties:
+                    lat:
+                      type: number
+                      format: float
+                    lng:
+                      type: number
+                      format: float
+                    delivery_instructions:
+                      type: string
+                    access_code:
+                      type: string
+            delivery_address:
+              allOf:
+                - $ref: "#/components/schemas/AddressShort"
+                - type: object
+                  properties:
+                    lat:
+                      type: number
+                      format: float
+                    lng:
+                      type: number
+                      format: float
+                    delivery_instructions:
+                      type: string
+                    access_code:
+                      type: string
+            sender:
+              type: object
+              properties:
+                uid:
+                  type: string
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                profile_picture_url:
+                  type: string
+                average_rating:
+                  type: number
+                  format: float
+            courier:
+              type: object
+              properties:
+                uid:
+                  type: string
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                profile_picture_url:
+                  type: string
+                average_rating:
+                  type: number
+                  format: float
+                vehicle:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    color:
+                      type: string
+                    make:
+                      type: string
+                    model:
+                      type: string
+            recipient:
+              type: object
+              properties:
+                name:
+                  type: string
+                phone:
+                  type: string
+                email:
+                  type: string
+            payment:
+              type: object
+              properties:
+                uid:
+                  type: string
+                status:
+                  type: string
+                amount:
+                  type: number
+                  format: float
+                tip_amount:
+                  type: number
+                  format: float
+                breakdown:
+                  type: object
+                  properties:
+                    base_fee:
+                      type: number
+                      format: float
+                    distance_fee:
+                      type: number
+                      format: float
+                    weight_fee:
+                      type: number
+                      format: float
+                    priority_fee:
+                      type: number
+                      format: float
+                    tax:
+                      type: number
+                      format: float
+                    discount:
+                      type: number
+                      format: float
+                    total:
+                      type: number
+                      format: float
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  uid:
+                    type: string
+                  name:
+                    type: string
+                  quantity:
+                    type: integer
+                  description:
+                    type: string
+                  declared_value:
+                    type: number
+                    format: float
+                  photo_url:
+                    type: string
+            status_history:
+              type: array
+              items:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+                  notes:
+                    type: string
+                  location:
+                    $ref: "#/components/schemas/Location"
+            ratings:
+              type: object
+              properties:
+                sender_rating:
+                  type: object
+                  properties:
+                    rating:
+                      type: number
+                      format: float
+                    comment:
+                      type: string
+                    created_at:
+                      type: string
+                      format: date-time
+                courier_rating:
+                  type: object
+                  properties:
+                    rating:
+                      type: number
+                      format: float
+                    timeliness_rating:
+                      type: number
+                      format: float
+                    communication_rating:
+                      type: number
+                      format: float
+                    handling_rating:
+                      type: number
+                      format: float
+                    comment:
+                      type: string
+                    created_at:
+                      type: string
+                      format: date-time
+            tracking_links:
+              type: object
+              properties:
+                recipient_link:
+                  type: string
+                sender_link:
+                  type: string
+    CancelDeliveryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        delivery:
+          type: object
+          properties:
+            uid:
+              type: string
+            status:
+              type: string
+            cancellation_reason:
+              type: string
+        refund:
+          type: object
+          properties:
+            processed:
+              type: boolean
+            amount:
+              type: number
+              format: float
+            status:
+              type: string
+        message:
+          type: string
+    DeliveryTipResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        payment:
+          type: object
+          properties:
+            uid:
+              type: string
+            tip_amount:
+              type: number
+              format: float
+            total_amount:
+              type: number
+              format: float
+        message:
+          type: string
+    DeliveryRatingRequest:
+      type: object
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+        timeliness_rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        communication_rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        handling_rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        issue_reported:
+          type: boolean
+        issue_type:
+          type: string
+        issue_description:
+          type: string
+      required:
+        - rating
+    DeliveryRatingResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        rating:
+          type: object
+          properties:
+            uid:
+              type: string
+            delivery_id:
+              type: string
+            rating:
+              type: integer
+            comment:
+              type: string
+            timeliness_rating:
+              type: integer
+            communication_rating:
+              type: integer
+            handling_rating:
+              type: integer
+            issue_reported:
+              type: boolean
+            created_at:
+              type: string
+              format: date-time
+        message:
+          type: string
+    DeliveryIssueRequest:
+      type: object
+      properties:
+        issue_type:
+          type: string
+          enum:
+            - pickup_problem
+            - delivery_problem
+            - package_damaged
+            - courier_issue
+            - address_issue
+            - other
+        description:
+          type: string
+        photos:
+          type: array
+          items:
+            type: string
+      required:
+        - issue_type
+        - description
+    DeliveryIssueResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        issue:
+          type: object
+          properties:
+            uid:
+              type: string
+            issue_type:
+              type: string
+            status:
+              type: string
+            created_at:
+              type: string
+              format: date-time
+        message:
+          type: string
+    DeliveryReceiptResponse:
+      type: object
+      properties:
+        receipt:
+          type: object
+          properties:
+            receipt_number:
+              type: string
+            date:
+              type: string
+              format: date-time
+            delivery:
+              type: object
+              properties:
+                uid:
+                  type: string
+                pickup_address:
+                  $ref: "#/components/schemas/AddressShort"
+                delivery_address:
+                  $ref: "#/components/schemas/AddressShort"
+                package_type:
+                  type: string
+                distance:
+                  type: number
+                  format: float
+                priority_level:
+                  type: string
+                pickup_time:
+                  type: string
+                  format: date-time
+                delivery_time:
+                  type: string
+                  format: date-time
+            payment:
+              type: object
+              properties:
+                payment_method:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    provider:
+                      type: string
+                    last_four:
+                      type: string
+                breakdown:
+                  type: object
+                  properties:
+                    base_fee:
+                      type: number
+                      format: float
+                    distance_fee:
+                      type: number
+                      format: float
+                    weight_fee:
+                      type: number
+                      format: float
+                    priority_fee:
+                      type: number
+                      format: float
+                    subtotal:
+                      type: number
+                      format: float
+                    tax:
+                      type: number
+                      format: float
+                    discount:
+                      type: number
+                      format: float
+                    tip:
+                      type: number
+                      format: float
+                    total:
+                      type: number
+                      format: float
+                promo_applied:
+                  type: object
+                  properties:
+                    code:
+                      type: string
+                    discount_amount:
+                      type: number
+                      format: float
+            company_details:
+              type: object
+              properties:
+                name:
+                  type: string
+                address:
+                  type: string
+                tax_id:
+                  type: string
+                support_email:
+                  type: string
+                support_phone:
+                  type: string
+    CourierAvailabilityRequest:
+      type: object
+      properties:
+        is_available:
+          type: boolean
+        current_location:
+          $ref: "#/components/schemas/Location"
+      required:
+        - is_available
+    CourierAvailabilityResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        courier_profile:
+          type: object
+          properties:
+            is_available:
+              type: boolean
+            current_location_lat:
+              type: number
+              format: float
+            current_location_lng:
+              type: number
+              format: float
+            location_updated_at:
+              type: string
+              format: date-time
+        message:
+          type: string
+    CourierLocationUpdateRequest:
+      type: object
+      properties:
+        location:
+          allOf:
+            - $ref: "#/components/schemas/Location"
+            - type: object
+              properties:
+                accuracy:
+                  type: number
+                  format: float
+                heading:
+                  type: number
+                  format: float
+                speed:
+                  type: number
+                  format: float
+              required:
+                - lat
+                - lng
+        delivery_id:
+          type: string
+        battery_level:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+        device_info:
+          type: string
+      required:
+        - location
+    CourierLocationUpdateResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        location_update:
+          type: object
+          properties:
+            uid:
+              type: string
+            latitude:
+              type: number
+              format: float
+            longitude:
+              type: number
+              format: float
+            timestamp:
+              type: string
+              format: date-time
+        status_update:
+          type: object
+          properties:
+            triggered:
+              type: boolean
+            new_status:
+              type: string
+            estimated_time_update:
+              type: string
+              format: date-time
+        message:
+          type: string
+    DeliveryRequestsResponse:
+      type: object
+      properties:
+        delivery_requests:
+          type: array
+          items:
+            type: object
+            properties:
+              uid:
+                type: string
+              created_at:
+                type: string
+                format: date-time
+              scheduled_pickup_time:
+                type: string
+                format: date-time
+              estimated_duration:
+                type: number
+                format: float
+              priority_level:
+                type: string
+              package_type:
+                type: object
+                properties:
+                  uid:
+                    type: string
+                  name:
+                    type: string
+                  icon_url:
+                    type: string
+              pickup_address:
+                allOf:
+                  - $ref: "#/components/schemas/AddressShort"
+                  - type: object
+                    properties:
+                      lat:
+                        type: number
+                        format: float
+                      lng:
+                        type: number
+                        format: float
+              delivery_address:
+                type: object
+                properties:
+                  city:
+                    type: string
+                  state:
+                    type: string
+                  lat:
+                    type: number
+                    format: float
+                  lng:
+                    type: number
+                    format: float
+              distance:
+                type: object
+                properties:
+                  pickup_distance:
+                    type: number
+                    format: float
+                  delivery_distance:
+                    type: number
+                    format: float
+                  total_distance:
+                    type: number
+                    format: float
+              earnings:
+                type: object
+                properties:
+                  base_amount:
+                    type: number
+                    format: float
+                  estimated_total:
+                    type: number
+                    format: float
+              expires_at:
+                type: string
+                format: date-time
+    AcceptDeliveryRequest:
+      type: object
+      properties:
+        current_location:
+          $ref: "#/components/schemas/Location"
+    AcceptDeliveryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        delivery:
+          type: object
+          properties:
+            uid:
+              type: string
+            status:
+              type: string
+            pickup_address:
+              allOf:
+                - $ref: "#/components/schemas/AddressShort"
+                - type: object
+                  properties:
+                    lat:
+                      type: number
+                      format: float
+                    lng:
+                      type: number
+                      format: float
+                    delivery_instructions:
+                      type: string
+                    access_code:
+                      type: string
+            navigation:
+              type: object
+              properties:
+                pickup_directions_url:
+                  type: string
+        message:
+          type: string
+    UpdateDeliveryStatusRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - en_route_to_pickup
+            - at_pickup
+            - picked_up
+            - in_transit
+            - approaching_dropoff
+            - at_dropoff
+            - delivered
+            - failed
+            - returned
+        location:
+          $ref: "#/components/schemas/Location"
+        notes:
+          type: string
+        delivery_proof:
+          type: object
+          properties:
+            photo_url:
+              type: string
+            signature_url:
+              type: string
+            recipient_verified:
+              type: boolean
+      required:
+        - status
+    UpdateDeliveryStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        delivery:
+          type: object
+          properties:
+            uid:
+              type: string
+            status:
+              type: string
+            current_status_since:
+              type: string
+              format: date-time
+            next_destination:
+              type: object
+              properties:
+                address:
+                  type: string
+                lat:
+                  type: number
+                  format: float
+                lng:
+                  type: number
+                  format: float
+                directions_url:
+                  type: string
+        message:
+          type: string
+    DeliveryMessagesResponse:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            type: object
+            properties:
+              uid:
+                type: string
+              sender_id:
+                type: string
+              sender_name:
+                type: string
+              sender_type:
+                type: string
+                enum:
+                  - sender
+                  - courier
+                  - recipient
+                  - system
+              recipient_id:
+                type: string
+              content:
+                type: string
+              attachment_url:
+                type: string
+              attachment_type:
+                type: string
+              is_read:
+                type: boolean
+              read_at:
+                type: string
+                format: date-time
+              created_at:
+                type: string
+                format: date-time
+        has_more:
+          type: boolean
+    SendMessageRequest:
+      type: object
+      properties:
+        content:
+          type: string
+        attachment_url:
+          type: string
+        attachment_type:
+          type: string
+          enum:
+            - image
+            - location
+            - other
+        tracking_token:
+          type: string
+      required:
+        - content
+    SendMessageResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: object
+          properties:
+            uid:
+              type: string
+            sender_id:
+              type: string
+            sender_name:
+              type: string
+            recipient_id:
+              type: string
+            content:
+              type: string
+            attachment_url:
+              type: string
+            attachment_type:
+              type: string
+            is_read:
+              type: boolean
+            created_at:
+              type: string
+              format: date-time
+    MessageReadStatus:
+      type: object
+      properties:
+        uid:
+          type: string
+        is_read:
+          type: boolean
+        read_at:
+          type: string
+          format: date-time
+    NotificationsResponse:
+      type: object
+      properties:
+        notifications:
+          type: array
+          items:
+            type: object
+            properties:
+              uid:
+                type: string
+              type:
+                type: string
+              title:
+                type: string
+              content:
+                type: string
+              is_read:
+                type: boolean
+              read_at:
+                type: string
+                format: date-time
+              action_url:
+                type: string
+              image_url:
+                type: string
+              delivery_id:
+                type: string
+              created_at:
+                type: string
+                format: date-time
+        unread_count:
+          type: integer
+        pagination:
+          type: object
+          properties:
+            total_items:
+              type: integer
+            total_pages:
+              type: integer
+            current_page:
+              type: integer
+            has_next_page:
+              type: boolean
+            has_prev_page:
+              type: boolean
+    NotificationReadStatus:
+      type: object
+      properties:
+        uid:
+          type: string
+        is_read:
+          type: boolean
+        read_at:
+          type: string
+          format: date-time
+    MarkAllReadResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        count:
+          type: integer
+        message:
+          type: string
+    ValidatePromoCodeRequest:
+      type: object
+      properties:
+        code:
+          type: string
+        order_amount:
+          type: number
+          format: float
+      required:
+        - code
+    ValidatePromoCodeResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        promo_code:
+          type: object
+          properties:
+            uid:
+              type: string
+            code:
+              type: string
+            description:
+              type: string
+            discount_type:
+              type: string
+              enum:
+                - percentage
+                - fixed_amount
+            discount_value:
+              type: number
+              format: float
+            minimum_order_amount:
+              type: number
+              format: float
+            calculated_discount:
+              type: number
+              format: float
+        message:
+          type: string
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          default: false
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object

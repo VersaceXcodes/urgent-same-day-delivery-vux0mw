@@ -1,0 +1,21 @@
+{
+  "timestamp": 1747525085358,
+  "operation": {
+    "id": "settings:config:package"
+  },
+  "projectId": "urgent-same-day-delivery",
+  "files": [
+    {
+      "path": "/mnt/data/urgent-same-day-delivery/backend/package.json",
+      "type": "text",
+      "size": 823,
+      "dependencies": true
+    },
+    {
+      "path": "/mnt/data/urgent-same-day-delivery/backend/.env",
+      "type": "text",
+      "size": 427,
+      "dependencies": false
+    }
+  ]
+}

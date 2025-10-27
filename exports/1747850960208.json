@@ -1,0 +1,19 @@
+{
+  "timestamp": 1747850960208,
+  "operation": {
+    "id": "webapp:react:store",
+    "refs": {
+      "id": "redux",
+      "version": "latest"
+    }
+  },
+  "projectId": "urgent-same-day-delivery",
+  "files": [
+    {
+      "path": "/mnt/data/urgent-same-day-delivery/vitereact/src/store/main.tsx",
+      "type": "text",
+      "size": 2969,
+      "dependencies": false
+    }
+  ]
+}

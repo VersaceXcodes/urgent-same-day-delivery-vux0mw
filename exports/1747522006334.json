@@ -1,0 +1,15 @@
+{
+  "timestamp": 1747522006334,
+  "operation": {
+    "id": "backend:specifications:asyncapi"
+  },
+  "projectId": "urgent-same-day-delivery",
+  "files": [
+    {
+      "path": "/mnt/data/urgent-same-day-delivery/backend/asyncapi.yaml",
+      "type": "text",
+      "size": 22790,
+      "dependencies": false
+    }
+  ]
+}

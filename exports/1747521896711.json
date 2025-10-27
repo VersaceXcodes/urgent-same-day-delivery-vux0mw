@@ -1,0 +1,15 @@
+{
+  "timestamp": 1747521896711,
+  "operation": {
+    "id": "backend:specifications:openapi"
+  },
+  "projectId": "urgent-same-day-delivery",
+  "files": [
+    {
+      "path": "/mnt/data/urgent-same-day-delivery/backend/openapi.yaml",
+      "type": "text",
+      "size": 105482,
+      "dependencies": false
+    }
+  ]
+}

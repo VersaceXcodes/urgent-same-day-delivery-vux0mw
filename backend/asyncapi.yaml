@@ -1,0 +1,749 @@
+asyncapi: 2.6.0
+info:
+  title: FlashDrop Realtime API
+  version: 1.0.0
+  description: >
+    Real-time WebSocket API for FlashDrop, a same-day delivery service
+    application.
+
+    Enables location tracking, messaging, status updates, and notifications.
+servers:
+  production:
+    url: http://localhost:3000
+    protocol: ws
+    description: Development server for FlashDrop real-time communication
+channels:
+  /ws:
+    subscribe:
+      summary: Default server-to-client channel for all incoming messages
+      description: This channel delivers all server-originated events to connected clients
+      operationId: receiveServerMessages
+      message:
+        oneOf:
+          - $ref: "#/components/messages/track_delivery_location"
+          - $ref: "#/components/messages/delivery_status_change"
+          - $ref: "#/components/messages/delivery_eta_update"
+          - $ref: "#/components/messages/delivery_request"
+          - $ref: "#/components/messages/delivery_request_accepted"
+          - $ref: "#/components/messages/new_message_server"
+          - $ref: "#/components/messages/message_read_server"
+          - $ref: "#/components/messages/typing_indicator_server"
+          - $ref: "#/components/messages/notification"
+          - $ref: "#/components/messages/auth_response"
+    publish:
+      summary: Default client-to-server channel for all outgoing messages
+      description: This channel handles all client-originated events sent to the server
+      operationId: sendClientMessages
+      message:
+        oneOf:
+          - $ref: "#/components/messages/connection"
+          - $ref: "#/components/messages/disconnect"
+          - $ref: "#/components/messages/courier_location_update"
+          - $ref: "#/components/messages/new_message_client"
+          - $ref: "#/components/messages/message_read_client"
+          - $ref: "#/components/messages/typing_indicator_client"
+components:
+  messages:
+    connection:
+      name: connection
+      title: WebSocket Connection Request
+      summary: Establishes a WebSocket connection and authenticates the user
+      payload:
+        $ref: "#/components/schemas/ConnectionRequest"
+    auth_response:
+      name: auth_response
+      title: Authentication Response
+      summary: Response to a connection authentication request
+      payload:
+        $ref: "#/components/schemas/AuthResponse"
+    disconnect:
+      name: disconnect
+      title: Disconnect Request
+      summary: Client intentionally disconnects from the server
+      payload:
+        $ref: "#/components/schemas/DisconnectRequest"
+    courier_location_update:
+      name: courier_location_update
+      title: Courier Location Update
+      summary: Updates the courier's real-time location during a delivery
+      payload:
+        $ref: "#/components/schemas/CourierLocationUpdate"
+    track_delivery_location:
+      name: track_delivery_location
+      title: Delivery Location Tracking
+      summary: Real-time courier location for a specific delivery
+      payload:
+        $ref: "#/components/schemas/DeliveryLocationTracking"
+    delivery_status_change:
+      name: delivery_status_change
+      title: Delivery Status Change
+      summary: Notification of a delivery status update
+      payload:
+        $ref: "#/components/schemas/DeliveryStatusChange"
+    delivery_eta_update:
+      name: delivery_eta_update
+      title: Delivery ETA Update
+      summary: Update to the estimated arrival time for a delivery
+      payload:
+        $ref: "#/components/schemas/DeliveryEtaUpdate"
+    delivery_request:
+      name: delivery_request
+      title: New Delivery Request
+      summary: Notifies couriers of a new nearby delivery request
+      payload:
+        $ref: "#/components/schemas/DeliveryRequest"
+    delivery_request_accepted:
+      name: delivery_request_accepted
+      title: Delivery Request Accepted
+      summary: Notification that a courier has accepted a delivery request
+      payload:
+        $ref: "#/components/schemas/DeliveryRequestAccepted"
+    new_message_client:
+      name: new_message
+      title: New Message (Client)
+      summary: Client sends a new message related to a delivery
+      payload:
+        $ref: "#/components/schemas/NewMessageRequest"
+    new_message_server:
+      name: new_message
+      title: New Message (Server)
+      summary: Server broadcasts a new message to delivery participants
+      payload:
+        $ref: "#/components/schemas/NewMessageResponse"
+    message_read_client:
+      name: message_read
+      title: Message Read (Client)
+      summary: Client notifies that a message has been read
+      payload:
+        $ref: "#/components/schemas/MessageReadRequest"
+    message_read_server:
+      name: message_read
+      title: Message Read (Server)
+      summary: Server notifies that a message has been read
+      payload:
+        $ref: "#/components/schemas/MessageReadResponse"
+    typing_indicator_client:
+      name: typing_indicator
+      title: Typing Indicator (Client)
+      summary: Client indicates user is typing a message
+      payload:
+        $ref: "#/components/schemas/TypingIndicatorRequest"
+    typing_indicator_server:
+      name: typing_indicator
+      title: Typing Indicator (Server)
+      summary: Server broadcasts typing indicator to participants
+      payload:
+        $ref: "#/components/schemas/TypingIndicatorResponse"
+    notification:
+      name: notification
+      title: User Notification
+      summary: Real-time notification sent to a user
+      payload:
+        $ref: "#/components/schemas/Notification"
+  schemas:
+    ConnectionRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT authentication token
+      required:
+        - token
+    AuthResponse:
+      type: object
+      properties:
+        authenticated:
+          type: boolean
+          description: Whether authentication was successful
+        user_id:
+          type: string
+          description: ID of the authenticated user
+        channels:
+          type: array
+          description: List of channels the user is subscribed to
+          items:
+            type: string
+        message:
+          type: string
+          description: Authentication status message
+      required:
+        - authenticated
+    DisconnectRequest:
+      type: object
+      description: Empty payload for disconnect event
+      properties: {}
+    CourierLocationUpdate:
+      type: object
+      properties:
+        location:
+          $ref: "#/components/schemas/Location"
+        delivery_id:
+          type: string
+          description: ID of the current delivery (optional if not on active delivery)
+        battery_level:
+          type: number
+          description: Courier device battery percentage (0-100)
+          minimum: 0
+          maximum: 100
+      required:
+        - location
+    DeliveryLocationTracking:
+      type: object
+      properties:
+        delivery_id:
+          type: string
+          description: ID of the delivery being tracked
+        courier_location:
+          type: object
+          properties:
+            lat:
+              type: number
+              description: Latitude of courier's current position
+            lng:
+              type: number
+              description: Longitude of courier's current position
+            heading:
+              type: number
+              description: Direction in degrees (0-360)
+              minimum: 0
+              maximum: 360
+            speed:
+              type: number
+              description: Current speed in km/h
+            updated_at:
+              type: string
+              format: date-time
+              description: Timestamp of the location update
+          required:
+            - lat
+            - lng
+            - updated_at
+        status:
+          type: string
+          description: Current status of the delivery
+          enum:
+            - pending
+            - searching_courier
+            - courier_assigned
+            - en_route_to_pickup
+            - at_pickup
+            - picked_up
+            - in_transit
+            - approaching_dropoff
+            - at_dropoff
+            - delivered
+            - cancelled
+            - returned
+            - failed
+        estimated_arrival_time:
+          type: string
+          format: date-time
+          description: Estimated time of arrival at the next destination
+      required:
+        - delivery_id
+        - courier_location
+        - status
+    Location:
+      type: object
+      properties:
+        lat:
+          type: number
+          description: Latitude coordinate
+        lng:
+          type: number
+          description: Longitude coordinate
+        accuracy:
+          type: number
+          description: Accuracy of the location in meters
+        heading:
+          type: number
+          description: Direction in degrees (0-360)
+          minimum: 0
+          maximum: 360
+        speed:
+          type: number
+          description: Current speed in km/h
+      required:
+        - lat
+        - lng
+    DeliveryStatusChange:
+      type: object
+      properties:
+        delivery_id:
+          type: string
+          description: ID of the delivery
+        previous_status:
+          type: string
+          description: Previous delivery status
+          enum:
+            - pending
+            - searching_courier
+            - courier_assigned
+            - en_route_to_pickup
+            - at_pickup
+            - picked_up
+            - in_transit
+            - approaching_dropoff
+            - at_dropoff
+            - delivered
+            - cancelled
+            - returned
+            - failed
+        new_status:
+          type: string
+          description: New delivery status
+          enum:
+            - pending
+            - searching_courier
+            - courier_assigned
+            - en_route_to_pickup
+            - at_pickup
+            - picked_up
+            - in_transit
+            - approaching_dropoff
+            - at_dropoff
+            - delivered
+            - cancelled
+            - returned
+            - failed
+        timestamp:
+          type: string
+          format: date-time
+          description: Time when the status change occurred
+        updated_by:
+          type: string
+          description: Type of user who updated the status
+          enum:
+            - system
+            - sender
+            - courier
+        location:
+          type: object
+          properties:
+            lat:
+              type: number
+              description: Latitude where status was updated
+            lng:
+              type: number
+              description: Longitude where status was updated
+        notes:
+          type: string
+          description: Optional notes about the status change
+        estimated_delivery_time:
+          type: string
+          format: date-time
+          description: Updated estimated delivery time
+      required:
+        - delivery_id
+        - previous_status
+        - new_status
+        - timestamp
+        - updated_by
+    DeliveryEtaUpdate:
+      type: object
+      properties:
+        delivery_id:
+          type: string
+          description: ID of the delivery
+        previous_eta:
+          type: string
+          format: date-time
+          description: Previous estimated time of arrival
+        new_eta:
+          type: string
+          format: date-time
+          description: New estimated time of arrival
+        reason:
+          type: string
+          description: Reason for the ETA change
+          enum:
+            - traffic
+            - courier_delay
+            - route_change
+            - weather
+            - other
+        remaining_time_minutes:
+          type: number
+          description: Remaining time in minutes
+          minimum: 0
+      required:
+        - delivery_id
+        - previous_eta
+        - new_eta
+        - remaining_time_minutes
+    DeliveryRequest:
+      type: object
+      properties:
+        delivery_request:
+          type: object
+          properties:
+            uid:
+              type: string
+              description: Unique ID of the delivery request
+            created_at:
+              type: string
+              format: date-time
+              description: When the request was created
+            expires_at:
+              type: string
+              format: date-time
+              description: When the request expires
+            scheduled_pickup_time:
+              type: string
+              format: date-time
+              description: Scheduled time for pickup
+            estimated_duration:
+              type: number
+              description: Estimated delivery duration in minutes
+            priority_level:
+              type: string
+              enum:
+                - standard
+                - express
+                - urgent
+              description: Priority level of the delivery
+            package_type:
+              type: object
+              properties:
+                uid:
+                  type: string
+                  description: ID of the package type
+                name:
+                  type: string
+                  description: Name of the package type
+              required:
+                - uid
+                - name
+            pickup_address:
+              type: object
+              properties:
+                street_address:
+                  type: string
+                  description: Partial street address (for privacy)
+                city:
+                  type: string
+                  description: City
+                lat:
+                  type: number
+                  description: Latitude
+                lng:
+                  type: number
+                  description: Longitude
+              required:
+                - city
+                - lat
+                - lng
+            delivery_address:
+              type: object
+              properties:
+                city:
+                  type: string
+                  description: City
+                lat:
+                  type: number
+                  description: Latitude
+                lng:
+                  type: number
+                  description: Longitude
+              required:
+                - city
+                - lat
+                - lng
+            distance:
+              type: object
+              properties:
+                pickup_distance:
+                  type: number
+                  description: Distance to pickup location in km/miles
+                total_distance:
+                  type: number
+                  description: Total delivery distance in km/miles
+              required:
+                - pickup_distance
+                - total_distance
+            earnings:
+              type: object
+              properties:
+                estimated_total:
+                  type: number
+                  description: Estimated earnings for the delivery
+              required:
+                - estimated_total
+          required:
+            - uid
+            - created_at
+            - expires_at
+            - estimated_duration
+            - priority_level
+            - package_type
+            - pickup_address
+            - delivery_address
+            - distance
+            - earnings
+      required:
+        - delivery_request
+    DeliveryRequestAccepted:
+      type: object
+      properties:
+        delivery_id:
+          type: string
+          description: ID of the accepted delivery
+        courier:
+          type: object
+          properties:
+            uid:
+              type: string
+              description: Courier's user ID
+            first_name:
+              type: string
+              description: Courier's first name
+            last_name:
+              type: string
+              description: Courier's last name
+            profile_picture_url:
+              type: string
+              description: URL to courier's profile picture
+            average_rating:
+              type: number
+              description: Courier's average rating
+              minimum: 1
+              maximum: 5
+            vehicle:
+              type: object
+              properties:
+                type:
+                  type: string
+                  description: Type of vehicle
+                  enum:
+                    - bicycle
+                    - motorcycle
+                    - car
+                    - van
+                    - truck
+                color:
+                  type: string
+                  description: Vehicle color
+                make:
+                  type: string
+                  description: Vehicle make
+                model:
+                  type: string
+                  description: Vehicle model
+              required:
+                - type
+          required:
+            - uid
+            - first_name
+            - last_name
+        estimated_pickup_time:
+          type: string
+          format: date-time
+          description: Estimated time of pickup
+        estimated_delivery_time:
+          type: string
+          format: date-time
+          description: Estimated time of delivery
+      required:
+        - delivery_id
+        - courier
+        - estimated_pickup_time
+        - estimated_delivery_time
+    NewMessageRequest:
+      type: object
+      properties:
+        delivery_id:
+          type: string
+          description: ID of the delivery the message is related to
+        content:
+          type: string
+          description: Message content
+        attachment_url:
+          type: string
+          description: URL to an attachment (if any)
+        attachment_type:
+          type: string
+          enum:
+            - image
+            - location
+            - other
+          description: Type of attachment
+      required:
+        - delivery_id
+        - content
+    NewMessageResponse:
+      type: object
+      properties:
+        message:
+          type: object
+          properties:
+            uid:
+              type: string
+              description: Unique ID of the message
+            delivery_id:
+              type: string
+              description: ID of the related delivery
+            sender_id:
+              type: string
+              description: ID of the message sender
+            sender_name:
+              type: string
+              description: Name of the message sender
+            sender_type:
+              type: string
+              enum:
+                - sender
+                - courier
+                - recipient
+                - system
+              description: Role of the sender in the delivery
+            recipient_id:
+              type: string
+              description: ID of the message recipient
+            content:
+              type: string
+              description: Message content
+            attachment_url:
+              type: string
+              description: URL to an attachment (if any)
+            attachment_type:
+              type: string
+              enum:
+                - image
+                - location
+                - other
+              description: Type of attachment
+            is_read:
+              type: boolean
+              description: Whether the message has been read
+            created_at:
+              type: string
+              format: date-time
+              description: Time when the message was created
+          required:
+            - uid
+            - delivery_id
+            - sender_id
+            - sender_name
+            - sender_type
+            - recipient_id
+            - content
+            - is_read
+            - created_at
+      required:
+        - message
+    MessageReadRequest:
+      type: object
+      properties:
+        message_id:
+          type: string
+          description: ID of the message that was read
+      required:
+        - message_id
+    MessageReadResponse:
+      type: object
+      properties:
+        message_id:
+          type: string
+          description: ID of the message that was read
+        is_read:
+          type: boolean
+          description: Message read status (always true)
+          default: true
+        read_at:
+          type: string
+          format: date-time
+          description: Time when the message was read
+        reader_id:
+          type: string
+          description: ID of the user who read the message
+      required:
+        - message_id
+        - is_read
+        - read_at
+        - reader_id
+    TypingIndicatorRequest:
+      type: object
+      properties:
+        delivery_id:
+          type: string
+          description: ID of the delivery
+        is_typing:
+          type: boolean
+          description: Whether the user is currently typing
+      required:
+        - delivery_id
+        - is_typing
+    TypingIndicatorResponse:
+      type: object
+      properties:
+        delivery_id:
+          type: string
+          description: ID of the delivery
+        user_id:
+          type: string
+          description: ID of the user who is typing
+        user_name:
+          type: string
+          description: Name of the user who is typing
+        user_type:
+          type: string
+          enum:
+            - sender
+            - courier
+            - recipient
+          description: Role of the user in the delivery
+        is_typing:
+          type: boolean
+          description: Whether the user is currently typing
+      required:
+        - delivery_id
+        - user_id
+        - user_name
+        - user_type
+        - is_typing
+    Notification:
+      type: object
+      properties:
+        notification:
+          type: object
+          properties:
+            uid:
+              type: string
+              description: Unique ID of the notification
+            type:
+              type: string
+              enum:
+                - status_update
+                - message
+                - payment
+                - rating
+                - system
+                - promotional
+              description: Type of notification
+            title:
+              type: string
+              description: Notification title
+            content:
+              type: string
+              description: Notification content
+            action_url:
+              type: string
+              description: URL to navigate to when the notification is clicked
+            image_url:
+              type: string
+              description: URL to an image related to the notification
+            delivery_id:
+              type: string
+              description: ID of the related delivery
+            created_at:
+              type: string
+              format: date-time
+              description: Time when the notification was created
+          required:
+            - uid
+            - type
+            - title
+            - content
+            - created_at
+      required:
+        - notification
